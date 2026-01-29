@@ -1,0 +1,44 @@
+name: Build Nginx Modules
+
+on:
+  workflow_dispatch:
+    inputs:
+      debian_image:
+        description: 'Debian image to use for building'
+        required: true
+        default: 'debian:trixie'
+        type: string
+      nginx_version:
+        description: 'NGINX version to build'
+        required: true
+        default: '1.29.4'
+        type: string
+      build_modules:
+        description: 'Space-separated list of modules to build'
+        required: true
+        default: 'ndk lua'
+        type: string
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          make build \
+            DEBIAN_IMAGE="${{ inputs.debian_image }}" \
+            NGINX_VERSION="${{ inputs.nginx_version }}" \
+            BUILD_MODULES="${{ inputs.build_modules }}"
+
+      - name: Run container and extract artifacts
+        run: make run
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nginx-modules-${{ inputs.nginx_version }}
+          path: output/*
+          if-no-files-found: error
